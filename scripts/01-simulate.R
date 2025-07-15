@@ -2,17 +2,17 @@ library(tidyverse)
 library(here)
 library(truncnorm)
 
-set.seed(123)
+set.seed(42)
 
 n <- 1000
 
 simulated_patients <- tibble(
-  age = sample(18:85, n, replace = TRUE),
-  sex = sample(c("Male", "Female"), n, replace = TRUE),
-  weight = round(rnorm(n, mean = 75, sd = 15), 1),       # kg
+  age = rtruncnorm(n, a = 18, b = 90, mean = 60, sd = 10),
+  sex = sample(c("Male", "Female"), size = n, replace = TRUE, prob = c(0.45, 0.55)),
+  weight = rtruncnorm(n, a = 30, b = 150, mean = 70, sd = 12),       # kg
   height = round(rnorm(n, mean = 170, sd = 10), 1),      # cm
   creat_umol = round(runif(n, 40, 1000), 1)              # Creatinine in µmol/L
-) %>%in
+) %>%
   mutate(
     creat_mgdl = creat_umol / 88.4,
     bsa = 0.007184 * (height^0.725) * (weight^0.425),
@@ -31,7 +31,8 @@ simulated_patients <- tibble(
       0.85 * ((140 - age) * weight) / (72 * creat_mgdl)
     ),
     delta = crcl - egfr,
-    crcl_lt_30 = crcl < 30
+    crcl_lt_30 = crcl < 30,
+    corr_egfr = egfr * (bsa/1.73)
     )
   
 
@@ -54,6 +55,14 @@ ggplot(simulated_patients, aes(x = egfr, y = crcl, color = sex)) +
        y = "CrCl (mL/min)") +
   theme_minimal()
 
+ggplot(simulated_patients, aes(x = corr_egfr, y = crcl, color = sex)) +
+  geom_point(alpha = 0.6) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "black") +
+  labs(title = "Comparison of eGFR (CKD-EPI 2021) and CrCl (Cockcroft-Gault)",
+       x = "eGFR (mL/min/1.73m²)",
+       y = "CrCl (mL/min)") +
+  theme_minimal()
+
 ggplot(grouped_gfr, aes(x = bsa, y = crcl, color = gfr_group)) +
   geom_point(alpha = 0.6) +
   geom_hline(yintercept = 30, linetype = "dashed", color = "black") +
@@ -68,8 +77,8 @@ ggplot(grouped_gfr, aes(x = bsa, y = delta, color = gfr_group)) +
   geom_point(alpha = 0.6) +
   geom_vline(xintercept = 1.73, linetype = "dashed", color = "black") +
   geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
-  annotate("text", x = 1.4, y = 50, label = "CrCl > eGFR", hjust = 1, size = 4, alpha = 0.5) +
-  annotate("text", x = 1.4, y = -50, label = "CrCl < eGFR", hjust = 1, size = 4, alpha = 0.5) +
+  annotate("text", x = 1.5, y = 50, label = "CrCl > eGFR", hjust = 1, size = 4, alpha = 0.5) +
+  annotate("text", x = 1.5, y = -50, label = "CrCl < eGFR", hjust = 1, size = 4, alpha = 0.5) +
   annotate("rect", xmin = -Inf, xmax = Inf, ymin = 0, ymax = Inf,
            fill = "green", alpha = 0.05) +
   annotate("rect", xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = 0,
@@ -142,4 +151,8 @@ ggplot(threshold_summary, aes(x = egfr_thresh, y = sensitivity)) +
     x = "eGFR (ml/min/1.73m²)",
     y = "Sensitivity"
   ) +
-  theme_classic()
+  theme_minimal()
+
+check <- simulated_patients %>% 
+  filter(egfr >= 90,
+         delta <= -30)
