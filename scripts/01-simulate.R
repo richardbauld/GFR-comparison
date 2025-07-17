@@ -214,9 +214,15 @@ ggplot(simulated_patients, aes(x = mean_gfr, y = delta)) +
        y = "Difference (CrCl − eGFR)") +
   theme_minimal()
 
-ggplot(simulated_patients, aes(x = delta)) +
+ggplot(simulated_patients, aes(x = age)) +
   geom_histogram(binwidth = 5, fill = "steelblue", color = "white") +
-  geom_vline(xintercept = 0, linetype = "dashed") +
+  labs(title = "Distribution of CrCl − eGFR",
+       x = "Delta",
+       y = "Number of Patients") +
+  theme_minimal()
+
+ggplot(simulated_patients, aes(x = height)) +
+  geom_histogram(binwidth = 5, fill = "steelblue", color = "white") +
   labs(title = "Distribution of CrCl − eGFR",
        x = "Delta",
        y = "Number of Patients") +
